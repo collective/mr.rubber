@@ -26,17 +26,20 @@
 # events=SUPERVISOR_STATE_CHANGE_RUNNING
 
 doc = """\
-rubber.py [-p processpattern] [-o cpuoffset]
+rubber.py [-p processpattern] [-o cpuoffset] [-n numprocesses]
 
 Options:
 
--p -- specify a regex for a supervisor process_name. Processes matching
-      this pattern will be sorted and only the first X will be started
-      and the rest stopped if they are set to start. X is number of cpus
-      on the system plus the cpuoffset.
-      
--o -- specify a modified number of processes to start. -o -1 will start
-      cpu_count - 1 processes.
+--programs (-p):
+  Spec for which program names to control. Glob syntax such as "instance*" is supported.
+
+--num (-n):
+  The number of processes to run. Defaults to "auto" which will set this to the number of cpu cores detected
+  when rubber first starts
+
+--offset (-o):
+  A number to modify the --num argument by. For instance if --num=auto and --offset=-2 and the detected cores was
+  4 then the number of processes set to run would be 2.
 
 The -p option may be specified more than once, allowing for
 specification of multiple processes.
@@ -59,6 +62,8 @@ from supervisor.options import make_namespec
 
 
 import os,re,subprocess
+import fnmatch
+
 def  determineNumberOfCPUs():
     """ Number of virtual or physical CPUs on this system, i.e.
     user/real as output by time(1) when called with an optimally scaling
@@ -161,10 +166,11 @@ def usage():
 
 class Rubber:
     connclass = None
-    def __init__(self, rpc, programs, offset):
+    def __init__(self, rpc, programs, offset, num):
         self.rpc = rpc
         self.programs = programs
         self.offset = offset
+        self.num = num
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         self.stderr = sys.stderr
@@ -214,19 +220,29 @@ class Rubber:
             return
         #import pdb; pdb.set_trace()
 
-        cpus=determineNumberOfCPUs()
+        if self.num < 0:
+            cpus = determineNumberOfCPUs()
+        else:
+            cpus = self.num
         torun = cpus + self.offset
 #            import pdb; pdb.set_trace()
 
-        #totest = [spec for spec in specs]
-
-        write('%d cores. Running %d of %d  processes %s' % (cpus,torun, len(self.programs),self.programs))
-        running = 0
-        for spec in specs:
+        def match(spec):
             name = spec['name']
             group = spec['group']
             namespec = make_namespec(name, group)
-            if (name in self.programs) or (namespec in self.programs):
+            for pattern in self.programs:
+                if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(namespec, pattern):
+                    return True
+            return False
+
+        totest = []
+        totest = [spec['name'] for spec in specs if match(spec)]
+
+        write('%d cores. Running %d of %d  processes %s' % (cpus,torun, len(totest),totest))
+        running = 0
+        for spec in specs:
+            if match(spec):
                 if spec['state'] is ProcessStates.STOPPED:
                     if running < torun:
                         self.start(spec, write)
@@ -266,11 +282,12 @@ class Rubber:
 
 def main(argv=sys.argv):
     import getopt
-    short_args="hp:o:"
+    short_args="hp:o:n:"
     long_args=[
         "help",
         "program=",
-        "offset="
+        "offset=",
+        "num="
         ]
     arguments = argv[1:]
     try:
@@ -283,6 +300,7 @@ def main(argv=sys.argv):
 
     programs = []
     offset = 0
+    num = -1
 
     for option, value in opts:
 
@@ -293,7 +311,13 @@ def main(argv=sys.argv):
             programs.append(value)
 
         if option in ('-o', '--offset'):
-            offset = value
+            offset = int(value)
+
+        if option in ('-n', '--num'):
+            if value == "auto":
+                num = -1
+            else:
+                num = int(value)
 
     url = arguments[-1]
 
@@ -307,7 +331,7 @@ def main(argv=sys.argv):
         sys.stderr.flush()
         return
 
-    prog = Rubber(rpc, programs, offset)
+    prog = Rubber(rpc, programs, offset, num)
     prog.runforever()
 
 if __name__ == '__main__':
