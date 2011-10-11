@@ -46,7 +46,7 @@ specification of multiple processes.
 
 A sample invocation:
 
-rubber.py -p program1 -p group1:program2 -o -2
+rubber.py -p program* -p group1:program2 -o -2
 
 """
 
