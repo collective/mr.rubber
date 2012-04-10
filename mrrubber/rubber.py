@@ -220,6 +220,8 @@ class Rubber:
             return
         #import pdb; pdb.set_trace()
 
+        specs.sort(key=lambda spec:spec['priority'])
+
         if self.num < 0:
             cpus = determineNumberOfCPUs()
         else:
