@@ -218,9 +218,12 @@ class Rubber:
         except Exception, why:
             write('Exception retrieving process info %s, not acting' % why)
             return
-        #import pdb; pdb.set_trace()
 
-        specs.sort(key=lambda spec:spec['priority'])
+        # import pdb; pdb.set_trace()
+        #
+        # this doesnt work because 'priority' is not available to this data
+        # scructure
+        #specs.sort(key=lambda spec:int(spec.get('priority',99999)))
 
         if self.num < 0:
             cpus = determineNumberOfCPUs()
