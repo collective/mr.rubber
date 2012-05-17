@@ -14,7 +14,7 @@ class HTTPOkTests(unittest.TestCase):
 #        if response is None:
         response = DummyResponse()
         rpc = DummyRPCServer()
-        prog = self._makeOne(rpc, programs,offset)
+        prog = self._makeOne(rpc, programs, offset)
         prog.stdin = StringIO()
         prog.stdout = StringIO()
         prog.stderr = StringIO()

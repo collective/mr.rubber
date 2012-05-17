@@ -166,7 +166,7 @@ def usage():
 
 class Rubber:
     connclass = None
-    def __init__(self, rpc, programs, offset, num):
+    def __init__(self, rpc, programs, offset, num=-1):
         self.rpc = rpc
         self.programs = programs
         self.offset = offset
@@ -174,11 +174,6 @@ class Rubber:
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         self.stderr = sys.stderr
-
-    def listProcesses(self, state=None):
-        return [x for x in self.rpc.supervisor.getAllProcessInfo()
-                   if x['name'] in self.programs and
-                      (state is None or x['state'] == state)]
 
     def runforever(self, test=False):
         # Do it when we first run
@@ -200,6 +195,15 @@ class Rubber:
             if test:
                 break
 
+    def listProcesses(self):
+        try:
+            specs = self.rpc.supervisor.getAllProcessInfo()
+        except Exception, why:
+            write('Exception retrieving process info %s, not acting' % why)
+            return
+
+        #specs.sort(key=lambda spec:spec['priority'])
+        return specs
 
     def checkProcesses(self):
         """ Start or stop matching processes to match required process count
@@ -212,15 +216,6 @@ class Rubber:
 
 
         act = False
-
-        try:
-            specs = self.rpc.supervisor.getAllProcessInfo()
-        except Exception, why:
-            write('Exception retrieving process info %s, not acting' % why)
-            return
-        #import pdb; pdb.set_trace()
-
-        specs.sort(key=lambda spec:spec['priority'])
 
         if self.num < 0:
             cpus = determineNumberOfCPUs()
@@ -237,6 +232,8 @@ class Rubber:
                 if fnmatch.fnmatch(name, pattern) or fnmatch.fnmatch(namespec, pattern):
                     return True
             return False
+
+        specs = self.listProcesses()
 
         totest = []
         totest = [spec['name'] for spec in specs if match(spec)]
