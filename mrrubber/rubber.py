@@ -12,7 +12,10 @@
 # FITNESS FOR A PARTICULAR PURPOSE
 #
 ##############################################################################
-
+##############################################################################
+# add multiple option
+# author: redink
+#############################################################################
 # A event listener meant to be subscribed to SUPERVISOR_STATE_CHANGE_RUNNING
 # events, which will start only as many processes of a certain type
 # as there are cpu's available. This is useful for running many single
@@ -40,6 +43,10 @@ Options:
 --offset (-o):
   A number to modify the --num argument by. For instance if --num=auto and --offset=-2 and the detected cores was
   4 then the number of processes set to run would be 2.
+
+--multiple (-m):
+  A number to modify the --num argument by. For instance if --num=auto and --multiple=4 the detected cores was 1
+  then the number of processes set to run would be 4.
 
 The -p option may be specified more than once, allowing for
 specification of multiple processes.
@@ -166,11 +173,12 @@ def usage():
 
 class Rubber:
     connclass = None
-    def __init__(self, rpc, programs, offset, num):
+    def __init__(self, rpc, programs, offset, num, multiple):
         self.rpc = rpc
         self.programs = programs
         self.offset = offset
         self.num = num
+        self.multiple = multiple
         self.stdin = sys.stdin
         self.stdout = sys.stdout
         self.stderr = sys.stderr
@@ -230,6 +238,7 @@ class Rubber:
         else:
             cpus = self.num
         torun = cpus + self.offset
+        torun = torun * self.multiple
 #            import pdb; pdb.set_trace()
 
         def match(spec):
@@ -287,12 +296,13 @@ class Rubber:
 
 def main(argv=sys.argv):
     import getopt
-    short_args="hp:o:n:"
+    short_args="hp:o:n:m:"
     long_args=[
         "help",
         "program=",
         "offset=",
-        "num="
+        "num=",
+        "multiple="
         ]
     arguments = argv[1:]
     try:
@@ -306,6 +316,7 @@ def main(argv=sys.argv):
     programs = []
     offset = 0
     num = -1
+    multiple = 1
 
     for option, value in opts:
 
@@ -323,6 +334,8 @@ def main(argv=sys.argv):
                 num = -1
             else:
                 num = int(value)
+	if option in ('-m', '--multiple'):
+	    multiple = int(value)
 
     url = arguments[-1]
 
@@ -336,7 +349,7 @@ def main(argv=sys.argv):
         sys.stderr.flush()
         return
 
-    prog = Rubber(rpc, programs, offset, num)
+    prog = Rubber(rpc, programs, offset, num, multiple)
     prog.runforever()
 
 if __name__ == '__main__':
