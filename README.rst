@@ -18,6 +18,10 @@ Options are:
   A number to modify the --num argument by. For instance if --num=auto and --offset=-2 and the detected cores was
   4 then the number of processes set to run would be 2.
 
+--multiple (-m):
+  A number to modify the --num argument by. For instance if --num=auto and --multiple=4 the detected cores was 1
+  then the number of processes set to run would be 4.
+
 For example if you are using buildout with supervisor you could do the following ::
 
     [supervisor]
